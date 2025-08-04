@@ -1,0 +1,1559 @@
+---
+title: "Lobe report"
+format: docx
+editor: source
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  cache = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  error = FALSE,
+  echo = FALSE,
+  cache.comments = FALSE
+)
+
+```
+
+```{r prep-data, cache = FALSE}
+### Load packages
+library(brms)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(tidybayes)
+library(patchwork)
+library(rstan)
+
+### Load custom functions
+source("functions.R")
+
+### Load clean and prepped data
+source("data_prep.R")
+
+```
+
+# Analysis
+
+## Vertical lobe
+
+### Habitat and depth
+```{r m1VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + depth.max*benthic + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + (1 | gr(phy.species, cov = cormat)))
+
+m1.VL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1.VL, effects = "depth.max:benthic", resp = "VL1"), points = TRUE)
+```
+
+```{r}
+plot(conditional_effects(m1.VL, effects = "benthic", resp = "VL1"), points = TRUE)
+```
+
+### Depth categories
+```{r m1cVL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + depth_cat + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + depth_cat + (1 | gr(phy.species, cov = cormat)))
+
+m1c.VL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1c.VL, effects = "depth_cat", resp = "VL1"), points = TRUE, plot = FALSE)[[1]] +
+  scale_x_discrete(labels=(c("shallow", "daily", "ontogenetic", "deep")))
+```
+
+```{r fm1cVL, dpi=600, fig.height=5, fig.width=5}
+# depth categories
+mod <- m1c.VL
+imp <- mod$data
+resp <- "VL1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+expand.grid(list(depth_cat = 1:4)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           data = imp) +
+  scale_color_manual(values = cat4_colors) +
+  scale_fill_manual(values = cat4_colors) +
+  labs(x = "Depth category", y = "Vertical lobe size") +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "none")
+```
+
+### Age of sexual maturity
+```{r m2VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + mi(lifespan.max) + mi(matage.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.max | mi() ~ 1 + mi(ML.1) + mi(lifespan.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.max | mi() ~ 1 + mi(ML.1) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m2.VL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2.VL, effects = "matage.max", resp = "VL1"), points = TRUE)
+```
+
+### Sociality
+```{r m3VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + sociality.bin + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m3.VL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m3.VL, effects = "sociality.bin", resp = "VL1"), points = TRUE)
+```
+
+### Defense
+```{r m4VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 +  mi(defense.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(defense.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m4.VL <- brms_func(f, constrain_imp = TRUE, vars = "defense.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m4.VL, effects = "defense.repertoire:benthic", resp = "VL1"), points = TRUE)
+```
+
+### Foraging
+```{r m5VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 +  mi(foraging.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(foraging.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m5.VL <- brms_func(f, constrain_imp = TRUE, vars = "foraging.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m5.VL, effects = "foraging.repertoire:benthic", resp = "VL1"), points = TRUE)
+```
+
+### Predator breadth
+```{r m6VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + mi(predator.breadth)*benthic + depth.mean + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(predator.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + depth.mean + benthic + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1 | gr(phy.species, cov = cormat)))
+
+m6.VL <- brms_func(f, constrain_imp = TRUE, vars = "predator.breadth")
+```
+
+```{r}
+plot(conditional_effects(m6.VL, effects = "predator.breadth:benthic", resp = "VL1"), points = TRUE)
+```
+
+### Diet breadth
+```{r m7VL}
+f <- bf(VL.1 ~ mi(ML.1) + CNS.1 + mi(diet.breadth)*benthic + depth.mean + pos.latmean + articles.read + (1|gr(phy.species,cov=cormat))) +
+     bf(diet.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + articles.read + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))
+
+m7.VL <- brms_func(f, constrain_imp = TRUE, vars = "diet.breadth")
+```
+
+```{r}
+plot(conditional_effects(m7.VL, effects = "diet.breadth:benthic", resp = "VL1"), points = TRUE)
+```
+
+## Optic lobe
+
+### Habitat and depth
+```{r m1OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + depth.max*benthic + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + (1 | gr(phy.species, cov = cormat)))
+
+m1.OPL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1.OPL, effects = "depth.max:benthic", resp = "OPL1"), points = TRUE)
+```
+
+```{r}
+plot(conditional_effects(m1.OPL, effects = "benthic", resp = "OPL1"), points = TRUE)
+```
+
+### Depth categories
+```{r m1cOPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + depth_cat + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + depth_cat + (1 | gr(phy.species, cov = cormat)))
+
+m1c.OPL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1c.OPL, effects = "depth_cat", resp = "OPL1"), points = TRUE, plot = FALSE)[[1]] +
+  scale_x_discrete(labels=(c("shallow", "daily", "ontogenetic", "deep")))
+```
+
+```{r fm1cOPL, dpi=600, fig.height=5, fig.width=5}
+# depth categories
+mod <- m1c.OPL
+imp <- mod$data
+resp <- "OPL1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+expand.grid(list(depth_cat = 1:4)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           data = imp) +
+  scale_color_manual(values = cat4_colors) +
+  scale_fill_manual(values = cat4_colors) +
+  labs(x = "Depth category", y = "Optic lobe size") +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "none")
+```
+
+### Age of sexual maturity
+```{r m2OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + mi(lifespan.max) + mi(matage.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.max | mi() ~ 1 + mi(ML.1) + mi(lifespan.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.max | mi() ~ 1 + mi(ML.1) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species, cov=cormat)))
+
+m2.OPL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2.OPL, effects = "matage.max", resp = "OPL1"), points = TRUE)
+```
+
+### Sociality
+```{r m3OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + sociality.bin + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m3.OPL <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m3.OPL, effects = "sociality.bin", resp = "OPL1"), points = TRUE)
+```
+
+### Defense
+```{r m4OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 +  mi(defense.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(defense.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m4.OPL <- brms_func(f, constrain_imp = TRUE, vars = "defense.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m4.OPL, effects = "defense.repertoire:benthic", resp = "OPL1"), points = TRUE)
+```
+
+### Foraging
+```{r m5OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 +  mi(foraging.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(foraging.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m5.OPL <- brms_func(f, constrain_imp = TRUE, vars = "foraging.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m5.OPL, effects = "foraging.repertoire:benthic", resp = "OPL1"), points = TRUE)
+```
+
+### Predator breadth
+```{r m6OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + mi(predator.breadth)*benthic + depth.mean + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(predator.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + depth.mean + benthic + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1 | gr(phy.species, cov = cormat)))
+
+m6.OPL <- brms_func(f, constrain_imp = TRUE, vars = "predator.breadth")
+```
+
+```{r}
+plot(conditional_effects(m6.OPL, effects = "predator.breadth:benthic", resp = "OPL1"), points = TRUE)
+```
+
+### Diet breadth
+```{r m7OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + mi(diet.breadth)*benthic + depth.mean + pos.latmean + articles.read + (1|gr(phy.species,cov=cormat))) +
+     bf(diet.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + articles.read + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))
+
+m7.OPL <- brms_func(f, constrain_imp = TRUE, vars = "diet.breadth")
+```
+
+```{r}
+plot(conditional_effects(m7.OPL, effects = "diet.breadth:benthic", resp = "OPL1"), points = TRUE)
+```
+
+### Biolumninescence (NB: only relevant for the optic lobe)
+
+```{r m8OPL}
+f <- bf(OPL.1 ~ mi(ML.1) + CNS.1 + biolum*depth_cat + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + CNS.1 + (1 | gr(phy.species, cov = cormat)))
+
+m8.OPL <- brms_func(f)
+```
+
+```{r fm8OPL, dpi=600, fig.height=5, fig.width=5}
+# depth X biolum interaction
+mod <- m8.OPL
+imp <- mod$data
+resp <- "OPL1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+(f.bl <- expand.grid(list(depth_cat = 1:4, biolum = 0:1)) |>
+  mutate(ML.1 = 0, CNS.1 = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  cat_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           g_var = biolum,
+           data = imp,
+           interaction = TRUE) +
+  labs(x = "Depth category", y = "Optic lobe size")  +
+  scale_color_manual(name = "Bioluminescence",
+                     values = c("0" = cat_colors[1], "1" = cat_colors[2]),
+                     labels = c("Absent", "Present")) +
+  scale_fill_manual(name = "Bioluminescence",
+                     values = c("0" = cat_colors[1], "1" = cat_colors[2]),
+                     labels = c("Absent", "Present")) +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "bottom"))
+```
+
+```{r fm8OPL-lsmeans}
+# posterior contrasts/marginal mean differences (depth_cat by biolum)
+expand.grid(list(depth_cat = as.factor(1:4), biolum = as.factor(0:1))) |>
+  mutate(ML.1 = 0, CNS.1 = 0) |> 
+  as.data.frame() |>
+  marginaleffects::avg_comparisons(model = mod, 
+                                   variables = "depth_cat", 
+                                   by = "biolum", 
+                                   re_formula = NA, 
+                                   resp = resp)
+
+# posterior contrasts/marginal mean differences (biolum by depth_cat)
+expand.grid(list(depth_cat = as.factor(1:4), biolum = as.factor(0:1))) |>
+  mutate(ML.1 = 0, CNS.1 = 0) |> 
+  as.data.frame() |> 
+  marginaleffects::avg_comparisons(model = mod, 
+                                   variables = "biolum",
+                                   by = "depth_cat",
+                                   re_formula = NA, 
+                                   resp = resp)
+```
+
+## Central complex (CNS excl. optic lobe)
+
+### Habitat and depth
+```{r m1CC}
+f <- bf(CC.1 ~ mi(ML.1) + depth.max*benthic + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + (1 | gr(phy.species, cov = cormat)))
+
+m1.CC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1.CC, effects = "depth.max:benthic", resp = "CC1"), points = TRUE)
+```
+
+```{r}
+plot(conditional_effects(m1.CC, effects = "benthic", resp = "CC1"), points = TRUE)
+```
+
+### Depth categories
+```{r m1cCC}
+f <- bf(CC.1 ~ mi(ML.1) + depth_cat + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + depth_cat + (1 | gr(phy.species, cov = cormat)))
+
+m1c.CC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1c.CC, effects = "depth_cat", resp = "CC1"), points = TRUE, plot = FALSE)[[1]] +
+  scale_x_discrete(labels=(c("shallow", "daily", "ontogenetic", "deep")))
+```
+
+```{r fm1cCC, dpi=600, fig.height=5, fig.width=5}
+# depth categories
+mod <- m1c.CC
+imp <- mod$data
+resp <- "CC1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+expand.grid(list(depth_cat = 1:4)) |>
+  mutate(ML.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           data = imp) +
+  scale_color_manual(values = cat4_colors) +
+  scale_fill_manual(values = cat4_colors) +
+  labs(x = "Depth category", y = "Central complex size") +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "none")
+```
+
+### Age of sexual maturity
+```{r m2CC}
+f <- bf(CC.1 ~ mi(ML.1) + mi(lifespan.max) + mi(matage.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.max | mi() ~ 1 + mi(ML.1) + mi(lifespan.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.max | mi() ~ 1 + mi(ML.1) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species, cov=cormat)))
+
+m2.CC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2.CC, effects = "matage.max", resp = "CC1"), points = TRUE)
+```
+
+```{r m2minCC}
+f <- bf(CC.1 ~ mi(ML.1) + mi(lifespan.min) + mi(matage.min) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.min | mi() ~ 1 + mi(ML.1) + mi(lifespan.min) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.min | mi() ~ 1 + mi(ML.1) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species, cov=cormat)))
+
+m2min.CC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2min.CC, effects = "matage.min", resp = "CC1"), points = TRUE)
+```
+
+### Sociality
+```{r m3CC}
+f <- bf(CC.1 ~ mi(ML.1) + sociality.bin + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m3.CC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m3.CC, effects = "sociality.bin", resp = "CC1"), points = TRUE)
+```
+
+### Defense
+```{r m4CC}
+f <- bf(CC.1 ~ mi(ML.1) +  mi(defense.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(defense.repertoire | mi() ~ 1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m4.CC <- brms_func(f, constrain_imp = TRUE, vars = "defense.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m4.CC, effects = "defense.repertoire:benthic", resp = "CC1"), points = TRUE)
+```
+
+### Foraging
+```{r m5CC}
+f <- bf(CC.1 ~ mi(ML.1) +  mi(foraging.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(foraging.repertoire | mi() ~ 1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m5.CC <- brms_func(f, constrain_imp = TRUE, vars = "foraging.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m5.CC, effects = "foraging.repertoire:benthic", resp = "CC1"), points = TRUE)
+```
+
+### Predator breadth
+```{r m6CC}
+f <- bf(CC.1 ~ mi(ML.1) + mi(predator.breadth)*benthic + depth.mean + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(predator.breadth | mi() ~ 1 + mi(ML.1) + depth.mean + benthic + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + (1 | gr(phy.species, cov = cormat)))
+
+m6.CC <- brms_func(f, constrain_imp = TRUE, vars = "predator.breadth")
+```
+
+```{r}
+plot(conditional_effects(m6.CC, effects = "predator.breadth:benthic", resp = "CC1"), points = TRUE)
+```
+
+### Diet breadth
+```{r m7CC}
+f <- bf(CC.1 ~ mi(ML.1) + mi(diet.breadth)*benthic + depth.mean + pos.latmean + articles.read + (1|gr(phy.species,cov=cormat))) +
+     bf(diet.breadth | mi() ~ 1 + mi(ML.1) + articles.read + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(ML.1 | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))
+
+m7.CC <- brms_func(f, constrain_imp = TRUE, vars = "diet.breadth")
+```
+
+```{r}
+plot(conditional_effects(m7.CC, effects = "diet.breadth:benthic", resp = "CC1"), points = TRUE)
+```
+
+## Average total CNS
+
+### Habitat and depth
+```{r m1avgCNS}
+f <- bf(avgCNS ~ mi(avgML) + depth.max*benthic + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(avgML | mi() ~ 1 + (1 | gr(phy.species, cov = cormat)))
+
+m1.avgCNS <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1.avgCNS, effects = "depth.max:benthic", resp = "avgCNS"), points = TRUE)
+```
+
+```{r}
+plot(conditional_effects(m1.avgCNS, effects = "benthic", resp = "avgCNS"), points = TRUE)
+```
+
+### Depth categories
+```{r m1cavgCNS}
+f <- bf(avgCNS ~ mi(ML.1) + depth_cat + WoS + (1 | gr(phy.species, cov = cormat))) +
+     bf(ML.1 | mi() ~ 1 + depth_cat + (1 | gr(phy.species, cov = cormat)))
+
+m1c.avgCNS <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1c.avgCNS, effects = "depth_cat", resp = "avgCNS"), points = TRUE, plot = FALSE)[[1]] +
+  scale_x_discrete(labels=(c("shallow", "daily", "ontogenetic", "deep")))
+```
+
+```{r fm1cavgCNS, dpi=600, fig.height=5, fig.width=5}
+# depth categories
+mod <- m1c.avgCNS
+imp <- mod$data
+resp <- "avgCNS"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+expand.grid(list(depth_cat = 1:4)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           data = imp) +
+  scale_color_manual(values = cat4_colors) +
+  scale_fill_manual(values = cat4_colors) +
+  labs(x = "Depth category", y = "CNS (avg.) size") +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "none")
+```
+
+### Age of sexual maturity
+```{r m2avgCNS}
+f <- bf(avgCNS ~ mi(avgML) + mi(lifespan.max) + mi(matage.max) + WoS + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.max | mi() ~ 1 + mi(avgML) + mi(lifespan.max) + WoS + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.max | mi() ~ 1 + mi(avgML) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species, cov=cormat)))
+
+m2.avgCNS <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2.avgCNS, effects = "matage.max", resp = "avgCNS"), points = TRUE)
+```
+
+```{r m2minavgCNS}
+f <- bf(avgCNS ~ mi(avgML) + mi(lifespan.min) + mi(matage.min) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(matage.min | mi() ~ 1 + mi(avgML) + mi(lifespan.min) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(lifespan.min | mi() ~ 1 + mi(avgML) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species, cov=cormat)))
+
+m2min.avgCNS <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2min.avgCNS, effects = "matage.min", resp = "avgCNS"), points = TRUE)
+```
+
+### Sociality
+```{r m3avgCNS}
+f <- bf(avgCNS ~ mi(avgML) + sociality.bin + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m3.avgCNS <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m3.avgCNS, effects = "sociality.bin", resp = "avgCNS"), points = TRUE)
+```
+
+### Defense
+```{r m4avgCNS}
+f <- bf(avgCNS ~ mi(avgML) +  mi(defense.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(defense.repertoire | mi() ~ 1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m4.avgCNS <- brms_func(f, constrain_imp = TRUE, vars = "defense.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m4.avgCNS, effects = "defense.repertoire:benthic", resp = "avgCNS"), points = TRUE)
+```
+
+### Foraging
+```{r m5avgCNS}
+f <- bf(avgCNS ~ mi(avgML) +  mi(foraging.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+     bf(foraging.repertoire | mi() ~ 1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m5.avgCNS <- brms_func(f, constrain_imp = TRUE, vars = "foraging.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m5.avgCNS, effects = "foraging.repertoire:benthic", resp = "avgCNS"), points = TRUE)
+```
+
+### Predator breadth
+```{r m6avgCNS}
+f <- bf(avgCNS ~ mi(avgML) + mi(predator.breadth)*benthic + depth.mean + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(predator.breadth | mi() ~ 1 + mi(avgML) + depth.mean + benthic + articles.read + (1 | gr(phy.species, cov = cormat))) +
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + (1 | gr(phy.species, cov = cormat)))
+
+m6.avgCNS <- brms_func(f, constrain_imp = TRUE, vars = "predator.breadth")
+```
+
+```{r}
+plot(conditional_effects(m6.avgCNS, effects = "predator.breadth:benthic", resp = "avgCNS"), points = TRUE)
+```
+
+### Diet breadth
+```{r m7avgCNS}
+f <- bf(avgCNS ~ mi(avgML) + mi(diet.breadth)*benthic + depth.mean + pos.latmean + articles.read + (1|gr(phy.species,cov=cormat))) +
+     bf(diet.breadth | mi() ~ 1 + mi(avgML) + articles.read + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+     bf(avgML | mi() ~ 1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))
+
+m7.avgCNS <- brms_func(f, constrain_imp = TRUE, vars = "diet.breadth")
+```
+
+```{r}
+plot(conditional_effects(m7.avgCNS, effects = "diet.breadth:benthic", resp = "avgCNS"), points = TRUE)
+```
+
+## Vertical lobe complex
+
+### Habitat and depth
+```{r m1VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + depth.max*benthic + WoS + (1 | gr(phy.species, cov = cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + (1 | gr(phy.species, cov = cormat)))
+
+m1.VLC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1.VLC, effects = "depth.max:benthic", resp = "VLC1"), points = TRUE)
+```
+
+```{r}
+plot(conditional_effects(m1.VLC, effects = "benthic", resp = "VLC1"), points = TRUE)
+```
+
+### Depth categories
+```{r m1cVLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + depth_cat + WoS + (1 | gr(phy.species, cov = cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + depth_cat + (1 | gr(phy.species, cov = cormat)))
+
+m1c.VLC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m1c.VLC, effects = "depth_cat", resp = "VLC1"), points = TRUE, plot = FALSE)[[1]] +
+  scale_x_discrete(labels=(c("shallow", "daily", "ontogenetic", "deep")))
+```
+
+```{r fm1cVLC, dpi=600, fig.height=5, fig.width=5}
+# depth categories
+mod <- m1c.VLC
+imp <- mod$data
+resp <- "VLC1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+expand.grid(list(depth_cat = 1:4)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = depth_cat, 
+           y_var = !!sym(y_var),
+           data = imp) +
+  scale_color_manual(values = cat4_colors) +
+  scale_fill_manual(values = cat4_colors) +
+  labs(x = "Depth category", y = "Vertical lobe complex size") +
+  scale_x_discrete(label = c("shallow", "daily\n migration", "ontogenetic\n migration", "deep")) +
+  theme(legend.position = "none")
+```
+
+### Age of sexual maturity
+```{r m2VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + mi(lifespan.max) + mi(matage.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+  bf(matage.max | mi() ~ 1 + mi(ML.1) + mi(lifespan.max) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+  bf(lifespan.max | mi() ~ 1 + mi(ML.1) + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m2.VLC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m2.VLC, effects = "matage.max", resp = "VLC1"), points = TRUE)
+```
+
+### Sociality
+```{r m3VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + sociality.bin + WoS + benthic + depth.mean + (1|gr(phy.species,cov=cormat))) + 
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1|gr(phy.species, cov=cormat)))
+
+m3.VLC <- brms_func(f)
+```
+
+```{r}
+plot(conditional_effects(m3.VLC, effects = "sociality.bin", resp = "VLC1"), points = TRUE)
+```
+
+### Defense
+```{r m4VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 +  mi(defense.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+  bf(defense.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m4.VLC <- brms_func(f, constrain_imp = TRUE, vars = "defense.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m4.VLC, effects = "defense.repertoire:benthic", resp = "VLC1"), points = TRUE)
+```
+
+### Foraging
+```{r m5VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 +  mi(foraging.repertoire)*benthic + articles.read + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))+
+  bf(foraging.repertoire | mi() ~ 1 + CNS.1 + benthic + articles.read + (1|gr(phy.species,cov=cormat)))
+
+m5.VLC <- brms_func(f, constrain_imp = TRUE, vars = "foraging.repertoire")
+```
+
+```{r}
+plot(conditional_effects(m5.VLC, effects = "foraging.repertoire:benthic", resp = "VLC1"), points = TRUE)
+```
+
+### Predator breadth
+```{r m6VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + mi(predator.breadth)*benthic + depth.mean + articles.read + (1 | gr(phy.species, cov = cormat))) +
+  bf(predator.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + depth.mean + benthic + articles.read + (1 | gr(phy.species, cov = cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + (1 | gr(phy.species, cov = cormat)))
+
+m6.VLC <- brms_func(f, constrain_imp = TRUE, vars = "predator.breadth")
+```
+
+```{r}
+plot(conditional_effects(m6.VLC, effects = "predator.breadth:benthic", resp = "VLC1"), points = TRUE)
+```
+
+### Diet breadth
+```{r m7VLC}
+f <- bf(VLC.1 ~ mi(ML.1) + CNS.1 + mi(diet.breadth)*benthic + depth.mean + pos.latmean + articles.read + (1|gr(phy.species,cov=cormat))) +
+  bf(diet.breadth | mi() ~ 1 + mi(ML.1) + CNS.1 + articles.read + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat))) +
+  bf(ML.1 | mi() ~ 1 + CNS.1 + benthic + depth.mean + pos.latmean + (1|gr(phy.species,cov=cormat)))
+
+m7.VLC <- brms_func(f, constrain_imp = TRUE, vars = "diet.breadth")
+```
+
+```{r}
+plot(conditional_effects(m7.VLC, effects = "diet.breadth:benthic", resp = "VLC1"), points = TRUE)
+```
+
+# Saving
+
+```{r}
+save.image("~/t/lobe/fits.RData")
+```
+
+# Report plots
+
+## Descriptives
+
+### Lobe percentage to total CNS
+
+```{r}
+# Create bar charts
+bardat <- dat |> 
+  select(species, benthic, depth.mean, depth_cat, CNS.1, VL.1, OPL.1) |>
+  mutate(pVL = (VL.1/CNS.1)*100,
+         pVL2 = (VL.1/(CNS.1-OPL.1))*100,
+         pOPL = (OPL.1/CNS.1)*100,
+         benthic = as.factor(benthic),
+         depth = depth.mean,
+         depth.cat = as.factor(depth_cat))
+```
+
+```{r fOPLbar, fig.height=10, dpi = 600, fig.width=8}
+# optic lobe
+bardat |> ggplot(aes(x = reorder(species, -pOPL), y = pOPL, fill = benthic, color = benthic)) +
+  geom_bar(stat = "identity", alpha = 0.65) +
+  scale_fill_manual(name = "Habitat",
+                    values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                    labels = c("Pelagic", "Benthic")) +
+  scale_color_manual(name = "Habitat",
+                     values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                     labels = c("Pelagic", "Benthic")) +
+  theme_classic() +
+  coord_flip() + 
+  scale_y_continuous(limits = c(0,100), labels = scales::label_percent(scale = 1)) + 
+  labs(x = "Species", y = "OPL percentage of total CNS",
+       title = "Optic lobe percentage of total CNS")
+```
+
+```{r fOPLdepthbar, fig.height=10, dpi = 600, fig.width=8}
+# optic lobe (depth/pelagic)
+bardat |> 
+  filter(benthic == 0) |>
+  ggplot(aes(x = reorder(species, -pOPL), y = pOPL, color = -depth, fill = -depth)) +
+  geom_bar(stat = "identity", alpha = 0.65) +
+  theme_classic() +
+  coord_flip() + 
+  scale_y_continuous(limits = c(0,100), labels = scales::label_percent(scale = 1)) + 
+  labs(x = "Species", y = "OPL percentage of total CNS",
+       title = "Optic lobe percentage of total CNS",
+       subtitle = "Pelagic species colored for depth")
+```
+
+```{r fOPLdepthcatbar, fig.height=10, dpi = 600, fig.width=8}
+# optic lobe (depth cat/pelagic)
+depth.labels <- c("shallow", "daily", "ontogenetic", "deep")
+
+bardat |> 
+  filter(benthic == 0) |>
+  ggplot(aes(x = reorder(species, -pOPL), y = pOPL, color = depth.cat, fill = depth.cat)) +
+  geom_bar(stat = "identity", alpha = 0.65) +
+  theme_classic() +
+  coord_flip() + 
+  scale_fill_brewer(labels = depth.labels) +
+  scale_color_brewer(labels = depth.labels) +
+  scale_y_continuous(limits = c(0,100), labels = scales::label_percent(scale = 1)) + 
+  labs(x = "Species", y = "OPL percentage of total CNS",
+       title = "Optic lobe percentage of total CNS",
+       subtitle = "Pelagic species colored by depth category")
+```
+
+```{r fVLbar, fig.height=10, dpi = 600, fig.width=8}
+# vertical lobe
+bardat |> ggplot(aes(x = reorder(species, -pVL), y = pVL, fill = benthic, color = benthic)) +
+  geom_bar(stat = "identity", alpha = 0.6) +
+  scale_fill_manual(name = "Habitat",
+                    values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                    labels = c("Pelagic", "Benthic")) +
+  scale_color_manual(name = "Habitat",
+                     values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                     labels = c("Pelagic", "Benthic")) +
+  theme_classic() +
+  coord_flip() + 
+  scale_y_continuous(limits = c(0,8), labels = scales::label_percent(scale = 1)) + 
+  labs(x = "Species", y = "VL percentage of total CNS",
+       title = "Vertical lobe percentage of total CNS")
+```
+
+```{r fVLbarCC, fig.height=10, dpi = 600, fig.width=8}
+# vertical lobe
+bardat |> ggplot(aes(x = reorder(species, -pVL2), y = pVL2, fill = benthic, color = benthic)) +
+  geom_bar(stat = "identity", alpha = 0.6) +
+  labs(x = "Species", y = "VL percentage of CNS excl. optic lobe") +
+  scale_fill_manual(name = "Habitat",
+                    values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                    labels = c("Pelagic", "Benthic")) +
+  scale_color_manual(name = "Habitat",
+                     values = c("0" = "#2C70FE", "1" = "#feba2c"),
+                     labels = c("Pelagic", "Benthic")) +
+  theme_classic() +
+  coord_flip() + 
+  scale_y_continuous(limits = c(0,30), labels = scales::label_percent(scale = 1)) + 
+  labs(x = "Species", y = "VL percentage of CNS excl. optic lobe",
+       title = "Vertical lobe percentage of CNS excl. optic lobe")
+```
+
+### Phylogenetic signal of lobe proportion to total CNS
+
+```{r fOPLphy, dpi = 600, fig.width=8, fig.height=8}
+#ASR and signal----
+library(phytools)
+library(viridis)
+library(plotrix)
+
+#decomposition of phylogenetic distance matrix into orthogonal vectors (PVRs)
+phylo.vectors = PVR::PVRdecomp(cephtreeMCC)
+
+# optic lobe
+phydat <- dat[c("phy.species","OPL.1","CNS.1")]
+phydat$OPL.1 <- log(phydat$OPL.1)
+phydat$CNS.1 <- log(phydat$CNS.1)
+phydat <- mice::complete(mice::mice(phydat)) #imputation
+
+#calculate "EQ" (actually, lobe to CNS proportion)
+phydat$EQ <- phydat$OPL.1/phydat$CNS.1
+logEQ <- as.vector(phydat$EQ)
+names(logEQ) <- d$phy.species
+
+#ancestral state reconstruction and plot
+ASR <- contMap(cephtreeMCC, logEQ, plot=FALSE, title = "OPL")
+
+n_cols <- n_distinct(logEQ)
+
+ASR$cols[1:length(ASR$cols)]<-colorRampPalette(c("#feba2c","#d6556d","#2a0593"))(length(ASR$cols))
+
+# Plot the mapped characters with the new colors
+plot(ASR, type="fan", outline=FALSE, legend = 0.7*max(nodeHeights(cephtreeMCC)),
+  fsize = c(0.7, 0.7))
+
+title(main = "Optic lobe percentage of total CNS",line = -1)
+```
+
+```{r fVLphy, dpi = 600, fig.width=8, fig.height=8}
+# vertical lobe
+phydat <- dat[c("phy.species","VL.1","CNS.1")]
+phydat$VL.1 <- log(phydat$VL.1)
+phydat$CNS.1 <- log(phydat$CNS.1)
+phydat <- mice::complete(mice::mice(phydat)) #imputation
+
+#calculate "EQ" (actually, lobe to CNS proportion)
+phydat$EQ <- phydat$VL.1/phydat$CNS.1
+logEQ <- as.vector(phydat$EQ)
+names(logEQ) <- d$phy.species
+
+#ancestral state reconstruction and plot
+ASR <- contMap(cephtreeMCC, logEQ, plot=FALSE)
+
+n_cols <- n_distinct(logEQ)
+length(ASR$cols)
+
+ASR$cols[1:1001]<-colorRampPalette(c("#feba2c","#d6556d","#2a0593"))(1001)
+
+# Plot the mapped characters with the new colors
+plot(ASR, type="fan", outline=FALSE, legend = 0.7*max(nodeHeights(cephtreeMCC)),
+  fsize = c(0.7, 0.7))
+
+title(main = "Vertical lobe percentage of total CNS", line = -1)
+```
+
+```{r fhabphylo, dpi = 600, fig.width=8, fig.height=8}
+# benthic
+phydat <- dat[c("phy.species","habitat3")]
+trait <- as.vector(phydat$habitat3)
+names(trait) <- d$phy.species
+
+#ancestral state reconstruction and plot
+ASR <- contMap(cephtreeMCC, trait, plot=FALSE)
+
+n_cols <- n_distinct(trait)
+length(ASR$cols)
+
+ASR$cols[1:1001]<-colorRampPalette(c("#feba2c","#d6556d","#2a0593"))(1001)
+
+# Plot the mapped characters with the new colors
+plot(ASR, type="fan", outline=FALSE, legend = 0.7*max(nodeHeights(cephtreeMCC)),
+  fsize = c(0.5, 0.7))
+```
+
+## Panel: VL
+
+```{r}
+# depth X benthic interaction
+mod <- m1.VL
+imp <- mod$data
+resp <- "VL1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+f.db <- expand.grid(list(depth.max = -4:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = depth.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Maximum depth", y = "Vertical lobe size") 
+
+### benthic  
+f.b <- rbind(transform(imp, benthic = 0),
+             transform(imp, benthic = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0, benthic = as.factor(benthic)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = benthic, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("pelagic", "benthic")) + 
+  labs(x = "Habitat", y = "Vertical lobe size")  
+
+### age of sexual maturity  
+mod <- m2.VL
+imp <- impute(model = mod, var = c("ML.1", "matage.max")) # impute to plot points
+
+f.a <- expand.grid(list(matage.max = -3:3)) |>
+  mutate(ML.1 = 0, 
+         lifespan.max = 0, 
+         CNS.1 = 0, 
+         WoS = 0, 
+         depth.mean = 0,
+         benthic = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = matage.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = FALSE) +
+  labs(x = "Maximum age of sexual maturity", y = "Vertical lobe size")
+
+### sociality 
+mod <- m3.VL
+imp <- mod$data
+
+f.s <- rbind(transform(imp, sociality.bin = 0),
+             transform(imp, sociality.bin = 1)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0, depth.mean = 0, sociality.bin = as.factor(sociality.bin)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = sociality.bin, 
+                y_var = !!sym(y_var), 
+                data = imp) + 
+  scale_x_discrete(labels = c("solitary", "gregarious")) + 
+  labs(x = "Sociality", y = "Vertical lobe size") 
+
+# defense X benthic interaction
+mod <- m4.VL
+imp <- impute(model = mod, var = c("ML.1", "defense.repertoire"))
+
+f.d <- expand.grid(list(defense.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = defense.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Defense repertoire size", y = "Vertical lobe size") 
+
+# foraging X benthic interaction
+mod <- m5.VL
+imp <- impute(model = mod, var = c("ML.1", "foraging.repertoire"))
+
+f.f <- expand.grid(list(foraging.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = foraging.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Foraging repertoire size", y = "Vertical lobe size") 
+
+# predator X benthic interaction
+mod <- m6.VL
+imp <- impute(model = mod, var = c("ML.1", "predator.breadth"))
+
+f.p <- expand.grid(list(predator.breadth = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = predator.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Predator breadth", y = "Vertical lobe size") 
+
+# diet X benthic interaction
+mod <- m7.VL
+imp <- impute(model = mod, var = c("ML.1", "diet.breadth"))
+
+f.di <- expand.grid(list(diet.breadth = -3:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = diet.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Diet breadth", y = "Vertical lobe size")
+```
+
+```{r fVLpanel, dpi = 600, fig.width=8, fig.height=10}
+f.b +
+  ggtitle("Vertical Lobe") + 
+  f.a + f.s + f.db + f.d + f.f + f.p + f.di + 
+  plot_layout(ncol = 2, guides='collect', axis_titles = "collect_y")
+```
+
+## Panel: OPL
+
+```{r}
+# depth X benthic interaction
+mod <- m1.OPL
+imp <- mod$data
+resp <- "OPL1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+f.db <- expand.grid(list(depth.max = -4:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = depth.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Maximum depth", y = "Optic lobe size") 
+
+### benthic  
+f.b <- rbind(transform(imp, benthic = 0),
+             transform(imp, benthic = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0, benthic = as.factor(benthic)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = benthic, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("pelagic", "benthic")) + 
+  labs(x = "Habitat", y = "Optic lobe size")  
+
+### age of sexual maturity  
+mod <- m2.OPL
+imp <- impute(model = mod, var = c("ML.1", "matage.max")) # impute to plot points
+
+f.a <- expand.grid(list(matage.max = -3:3)) |>
+  mutate(ML.1 = 0, 
+         lifespan.max = 0, 
+         CNS.1 = 0, 
+         WoS = 0, 
+         depth.mean = 0,
+         benthic = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = matage.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = FALSE) +
+  labs(x = "Maximum age of sexual maturity", y = "Optic lobe size")
+
+### sociality 
+mod <- m3.OPL
+imp <- mod$data
+
+f.s <- rbind(transform(imp, sociality.bin = 0),
+             transform(imp, sociality.bin = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0, depth.mean = 0, sociality.bin = as.factor(sociality.bin)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = sociality.bin, 
+                y_var = !!sym(y_var), 
+                data = imp) + 
+  scale_x_discrete(labels = c("solitary", "gregarious")) + 
+  labs(x = "Sociality", y = "Optic lobe size") 
+
+# defense X benthic interaction
+mod <- m4.OPL
+imp <- impute(model = mod, var = c("ML.1", "defense.repertoire"))
+
+f.d <- expand.grid(list(defense.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = defense.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Defense repertoire size", y = "Optic lobe size") 
+
+# foraging X benthic interaction
+mod <- m5.OPL
+imp <- impute(model = mod, var = c("ML.1", "foraging.repertoire"))
+
+f.f <- expand.grid(list(foraging.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = foraging.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Foraging repertoire size", y = "Optic lobe size") 
+
+# predator X benthic interaction
+mod <- m6.OPL
+imp <- impute(model = mod, var = c("ML.1", "predator.breadth"))
+
+f.p <- expand.grid(list(predator.breadth = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = predator.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Predator breadth", y = "Optic lobe size") 
+
+# diet X benthic interaction
+mod <- m7.OPL
+imp <- impute(model = mod, var = c("ML.1", "diet.breadth"))
+
+f.di <- expand.grid(list(diet.breadth = -3:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = diet.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Diet breadth", y = "Optic lobe size")
+```
+
+```{r fOPLpanel, dpi = 600, fig.width=8, fig.height=10}
+f.b +
+  ggtitle("Optic Lobe") + 
+  f.a + f.s + f.db + f.d + f.f + f.p + f.di + 
+  plot_layout(ncol = 2, guides='collect', axis_titles = "collect_y")
+```
+
+## Panel: CC
+
+```{r}
+# depth X benthic interaction
+mod <- m1.CC
+imp <- mod$data
+resp <- "CC1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+f.db <- expand.grid(list(depth.max = -4:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = depth.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Maximum depth", y = "Central complex size") 
+
+### benthic  
+f.b <- rbind(transform(imp, benthic = 0),
+             transform(imp, benthic = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, benthic = as.factor(benthic)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = benthic, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("pelagic", "benthic")) + 
+  labs(x = "Habitat", y = "Central complex size")  
+
+### age of sexual maturity  
+mod <- m2.CC
+imp <- impute(model = mod, var = c("ML.1", "matage.max")) # impute to plot points
+
+f.a <- expand.grid(list(matage.max = -3:3)) |>
+  mutate(ML.1 = 0, 
+         lifespan.max = 0, 
+         WoS = 0, 
+         depth.mean = 0,
+         benthic = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = matage.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = FALSE) +
+  labs(x = "Maximum age of sexual maturity", y = "Central complex size")
+
+### sociality 
+mod <- m3.CC
+imp <- mod$data
+
+f.s <- rbind(transform(imp, sociality.bin = 0),
+             transform(imp, sociality.bin = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, depth.mean = 0, sociality.bin = as.factor(sociality.bin)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = sociality.bin,
+                y_var = !!sym(y_var),
+                data = imp) + 
+  scale_x_discrete(labels = c("solitary", "gregarious")) + 
+  labs(x = "Sociality", y = "Central complex size") 
+
+# defense X benthic interaction
+mod <- m4.CC
+imp <- impute(model = mod, var = c("ML.1", "defense.repertoire"))
+
+f.d <- expand.grid(list(defense.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = defense.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Defense repertoire size", y = "Central complex size") 
+
+# foraging X benthic interaction
+mod <- m5.CC
+imp <- impute(model = mod, var = c("ML.1", "foraging.repertoire"))
+
+f.f <- expand.grid(list(foraging.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = foraging.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Foraging repertoire size", y = "Central complex size") 
+
+# predator X benthic interaction
+mod <- m6.CC
+imp <- impute(model = mod, var = c("ML.1", "predator.breadth"))
+
+f.p <- expand.grid(list(predator.breadth = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, depth.mean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = predator.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Predator breadth", y = "Central complex size") 
+
+# diet X benthic interaction
+mod <- m7.CC
+imp <- impute(model = mod, var = c("ML.1", "diet.breadth"))
+
+f.di <- expand.grid(list(diet.breadth = -3:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = diet.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Diet breadth", y = "Central complex size")
+```
+
+```{r fCCpanel, dpi = 600, fig.width=8, fig.height=10}
+f.b +
+  ggtitle("Central Complex") + 
+  f.a + f.s + f.db + f.d + f.f + f.p + f.di + 
+  plot_layout(ncol = 2, guides='collect', axis_titles = "collect_y")
+```
+
+## Panel: avgCNS
+
+```{r}
+# depth X benthic interaction
+mod <- m1.avgCNS
+imp <- mod$data
+resp <- "avgCNS"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+f.db <- expand.grid(list(depth.max = -4:2, benthic = 0:1)) |>
+  mutate(avgML = 0, WoS = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = depth.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Maximum depth", y = "CNS (avg.) size") 
+
+### benthic  
+f.b <- rbind(transform(imp, benthic = 0),
+             transform(imp, benthic = 1)) |>
+  mutate(avgML = 0, WoS = 0, benthic = as.factor(benthic)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = benthic, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("pelagic", "benthic")) + 
+  labs(x = "Habitat", y = "CNS (avg.) size")  
+
+### age of sexual maturity  
+mod <- m2.avgCNS
+imp <- impute(model = mod, var = c("avgML", "matage.max")) # impute to plot points
+
+f.a <- expand.grid(list(matage.max = -3:3)) |>
+  mutate(avgML = 0, 
+         lifespan.max = 0, 
+         WoS = 0, 
+         depth.mean = 0,
+         pos.latmean = 0,
+         benthic = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = matage.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = FALSE) +
+  labs(x = "Maximum age of sexual maturity", y = "CNS (avg.) size")
+
+### sociality 
+mod <- m3.avgCNS
+imp <- mod$data
+
+f.s <- rbind(transform(imp, sociality.bin = 0),
+             transform(imp, sociality.bin = 1)) |>
+  mutate(avgML = 0, WoS = 0, depth.mean = 0, sociality.bin = as.factor(sociality.bin)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = sociality.bin, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("solitary", "gregarious")) + 
+  labs(x = "Sociality", y = "CNS (avg.) size") 
+
+# defense X benthic interaction
+mod <- m4.avgCNS
+imp <- impute(model = mod, var = c("avgML", "defense.repertoire"))
+
+f.d <- expand.grid(list(defense.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(avgML = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = defense.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Defense repertoire size", y = "CNS (avg.) size") 
+
+# foraging X benthic interaction
+mod <- m5.avgCNS
+imp <- impute(model = mod, var = c("avgML", "foraging.repertoire"))
+
+f.f <- expand.grid(list(foraging.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(avgML = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = foraging.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Foraging repertoire size", y = "CNS (avg.) size") 
+
+# predator X benthic interaction
+mod <- m6.avgCNS
+imp <- impute(model = mod, var = c("avgML", "predator.breadth"))
+
+f.p <- expand.grid(list(predator.breadth = -2:2, benthic = 0:1)) |>
+  mutate(avgML = 0, articles.read = 0, depth.mean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = predator.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Predator breadth", y = "CNS (avg.) size") 
+
+# diet X benthic interaction
+mod <- m7.avgCNS
+imp <- impute(model = mod, var = c("avgML", "diet.breadth"))
+
+f.di <- expand.grid(list(diet.breadth = -3:2, benthic = 0:1)) |>
+  mutate(avgML = 0, articles.read = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = diet.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Diet breadth", y = "CNS (avg.) size")
+```
+
+```{r favgCNSpanel, dpi = 600, fig.width=8, fig.height=10}
+f.b +
+  ggtitle("CNS (avg.)") + 
+  f.a + f.s + f.db + f.d + f.f + f.p + f.di + 
+  plot_layout(ncol = 2, guides='collect', axis_titles = "collect_y")
+```
+
+## Panel: VLC
+
+```{r}
+# depth X benthic interaction
+mod <- m1.VLC
+imp <- mod$data
+resp <- "VLC1"
+y_var <- sub("(\\D)(\\d+)", "\\1.\\2", resp)
+
+f.db <- expand.grid(list(depth.max = -4:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0) |> # set covariates to their means
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = depth.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Maximum depth", y = "Vertical lobe complex size") 
+
+### benthic  
+f.b <- rbind(transform(imp, benthic = 0),
+             transform(imp, benthic = 1)) |>
+  mutate(ML.1 = 0, WoS = 0, CNS.1 = 0, benthic = as.factor(benthic)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = benthic, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("pelagic", "benthic")) + 
+  labs(x = "Habitat", y = "Vertical lobe complex size")  
+
+### age of sexual maturity  
+mod <- m2.VLC
+imp <- impute(model = mod, var = c("ML.1", "matage.max")) # impute to plot points
+
+f.a <- expand.grid(list(matage.max = -3:3)) |>
+  mutate(ML.1 = 0, 
+         lifespan.max = 0, 
+         CNS.1 = 0, 
+         WoS = 0, 
+         depth.mean = 0,
+         benthic = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = matage.max, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = FALSE) +
+  labs(x = "Maximum age of sexual maturity", y = "Vertical lobe complex size")
+
+### sociality 
+mod <- m3.VLC
+imp <- mod$data
+
+f.s <- rbind(transform(imp, sociality.bin = 0),
+             transform(imp, sociality.bin = 1)) |>
+  mutate(ML.1 = 0, CNS.1 = 0, WoS = 0, depth.mean = 0, sociality.bin = as.factor(sociality.bin)) |> 
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  gdensity_plot(x_var = sociality.bin, 
+           y_var = !!sym(y_var), 
+           data = imp) + 
+  scale_x_discrete(labels = c("solitary", "gregarious")) + 
+  labs(x = "Sociality", y = "Vertical lobe complex size") 
+
+# defense X benthic interaction
+mod <- m4.VLC
+imp <- impute(model = mod, var = c("ML.1", "defense.repertoire"))
+
+f.d <- expand.grid(list(defense.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = defense.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Defense repertoire size", y = "Vertical lobe complex size") 
+
+# foraging X benthic interaction
+mod <- m5.VLC
+imp <- impute(model = mod, var = c("ML.1", "foraging.repertoire"))
+
+f.f <- expand.grid(list(foraging.repertoire = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = foraging.repertoire, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Foraging repertoire size", y = "Vertical lobe complex size") 
+
+# predator X benthic interaction
+mod <- m6.VLC
+imp <- impute(model = mod, var = c("ML.1", "predator.breadth"))
+
+f.p <- expand.grid(list(predator.breadth = -2:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = predator.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Predator breadth", y = "Vertical lobe complex size") 
+
+# diet X benthic interaction
+mod <- m7.VLC
+imp <- impute(model = mod, var = c("ML.1", "diet.breadth"))
+
+f.di <- expand.grid(list(diet.breadth = -3:2, benthic = 0:1)) |>
+  mutate(ML.1 = 0, articles.read = 0, CNS.1 = 0, depth.mean = 0, pos.latmean = 0) |>
+  add_epred_draws(mod, resp = resp, re_formula = NA) |>
+  lineribbon_plot(x_var = diet.breadth, 
+                  y_var = !!sym(y_var), 
+                  data = imp,
+                  interaction = TRUE) +
+  labs(x = "Diet breadth", y = "Vertical lobe complex size")
+```
+
+```{r fVLCpanel, dpi = 600, fig.width=8, fig.height=10}
+f.b +
+  ggtitle("Vertical Lobe Complex") + 
+  f.a + f.s + f.db + f.d + f.f + f.p + f.di + 
+  plot_layout(ncol = 2, guides='collect', axis_titles = "collect_y")
+```
