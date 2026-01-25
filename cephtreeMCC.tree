@@ -1,0 +1,171 @@
+#NEXUS
+[R-package APE, Wed Apr 10 08:48:52 2024]
+
+BEGIN TAXA;
+	DIMENSIONS NTAX = 79;
+	TAXLABELS
+		Abdopus_aculeatus
+		Abralia_veranyi
+		Abraliopsis_morisii
+		Alloteuthis_media
+		Alloteuthis_subulata
+		Amphitretus_pelagicus
+		Ancistroteuthis_lichtensteinii
+		Architeuthis_dux
+		Argonauta_argo
+		Bathothauma_lyromma
+		Bathypolypus_bairdii
+		Bathypolypus_sponsalis
+		Bathyteuthis_abyssicola
+		Bolitaena_pygmaea
+		Callistoctopus_macropus
+		Chiroteuthis_veranii
+		Chtenopteryx_sicula
+		Cirroteuthis_muelleri
+		Cirrothauma_murrayi
+		Cranchia_scabra
+		Discoteuthis_laciniosa
+		Egea_inermis
+		Eledone_cirrhosa
+		Eledone_moschata
+		Enteroctopus_dofleini
+		Galiteuthis_armata
+		Gonatus_fabricii
+		Grimalditeuthis_bonplandi
+		Haliphron_atlanticus
+		Hapalochlaena_fasciata
+		Helicocranchia_pfefferi
+		Heteroteuthis_dispar
+		Histioteuthis_miranda
+		Illex_coindetii
+		Illex_illecebrosus
+		Japetella_diaphana
+		Joubiniteuthis_portieri
+		Leachia_atlantica
+		Loligo_forbesii
+		Loligo_vulgaris
+		Lolliguncula_brevis
+		Lycoteuthis_lorigera
+		Macrotritopus_defilippi
+		Mastigoteuthis_agassizii
+		Megalocranchia_oceanica
+		Neorossia_caroli
+		Neoteuthis_thielei
+		Octopoteuthis_danae
+		Octopus_bimaculatus
+		Octopus_salutii
+		Octopus_vulgaris
+		Ocythoe_tuberculata
+		Onychoteuthis_banksii
+		Pickfordiateuthis_pulchella
+		Pteroctopus_tetracirrhus
+		Pterygioteuthis_giardi
+		Pyroteuthis_margaritifera
+		Rossia_macrosoma
+		Sandalops_melancholicus
+		Scaeurgus_unicirrhus
+		Sepia_bandensis
+		Sepia_elegans
+		Sepia_officinalis
+		Sepia_orbignyana
+		Sepia_plangon
+		Sepietta_oweniana
+		Sepiola_affinis
+		Sepiola_robusta
+		Sepiola_rondeletii
+		Sepioteuthis_lessoniana
+		Sepioteuthis_sepioidea
+		Spirula_spirula
+		Taonius_pavo
+		Teuthowenia_megalops
+		Todarodes_sagittatus
+		Todaropsis_eblanae
+		Tremoctopus_violaceus
+		Vampyroteuthis_infernalis
+		Vitreledonella_richardi
+	;
+END;
+BEGIN TREES;
+	TRANSLATE
+		1	Abdopus_aculeatus,
+		2	Abralia_veranyi,
+		3	Abraliopsis_morisii,
+		4	Alloteuthis_media,
+		5	Alloteuthis_subulata,
+		6	Amphitretus_pelagicus,
+		7	Ancistroteuthis_lichtensteinii,
+		8	Architeuthis_dux,
+		9	Argonauta_argo,
+		10	Bathothauma_lyromma,
+		11	Bathypolypus_bairdii,
+		12	Bathypolypus_sponsalis,
+		13	Bathyteuthis_abyssicola,
+		14	Bolitaena_pygmaea,
+		15	Callistoctopus_macropus,
+		16	Chiroteuthis_veranii,
+		17	Chtenopteryx_sicula,
+		18	Cirroteuthis_muelleri,
+		19	Cirrothauma_murrayi,
+		20	Cranchia_scabra,
+		21	Discoteuthis_laciniosa,
+		22	Egea_inermis,
+		23	Eledone_cirrhosa,
+		24	Eledone_moschata,
+		25	Enteroctopus_dofleini,
+		26	Galiteuthis_armata,
+		27	Gonatus_fabricii,
+		28	Grimalditeuthis_bonplandi,
+		29	Haliphron_atlanticus,
+		30	Hapalochlaena_fasciata,
+		31	Helicocranchia_pfefferi,
+		32	Heteroteuthis_dispar,
+		33	Histioteuthis_miranda,
+		34	Illex_coindetii,
+		35	Illex_illecebrosus,
+		36	Japetella_diaphana,
+		37	Joubiniteuthis_portieri,
+		38	Leachia_atlantica,
+		39	Loligo_forbesii,
+		40	Loligo_vulgaris,
+		41	Lolliguncula_brevis,
+		42	Lycoteuthis_lorigera,
+		43	Macrotritopus_defilippi,
+		44	Mastigoteuthis_agassizii,
+		45	Megalocranchia_oceanica,
+		46	Neorossia_caroli,
+		47	Neoteuthis_thielei,
+		48	Octopoteuthis_danae,
+		49	Octopus_bimaculatus,
+		50	Octopus_salutii,
+		51	Octopus_vulgaris,
+		52	Ocythoe_tuberculata,
+		53	Onychoteuthis_banksii,
+		54	Pickfordiateuthis_pulchella,
+		55	Pteroctopus_tetracirrhus,
+		56	Pterygioteuthis_giardi,
+		57	Pyroteuthis_margaritifera,
+		58	Rossia_macrosoma,
+		59	Sandalops_melancholicus,
+		60	Scaeurgus_unicirrhus,
+		61	Sepia_bandensis,
+		62	Sepia_elegans,
+		63	Sepia_officinalis,
+		64	Sepia_orbignyana,
+		65	Sepia_plangon,
+		66	Sepietta_oweniana,
+		67	Sepiola_affinis,
+		68	Sepiola_robusta,
+		69	Sepiola_rondeletii,
+		70	Sepioteuthis_lessoniana,
+		71	Sepioteuthis_sepioidea,
+		72	Spirula_spirula,
+		73	Taonius_pavo,
+		74	Teuthowenia_megalops,
+		75	Todarodes_sagittatus,
+		76	Todaropsis_eblanae,
+		77	Tremoctopus_violaceus,
+		78	Vampyroteuthis_infernalis,
+		79	Vitreledonella_richardi
+	;
+	TREE * UNTITLED = [&R] ((((((((((1:35.53422238,((49:15.89982048,51:15.89982048):10.62089524,50:26.52071571):9.013506668):3.823333352,30:39.35755573):3.014540209,((15:24.1063729,(55:20.70783833,60:20.70783833):3.39853457):15.88544698,43:39.99181988):2.380276067):12.05366908,((11:11.32661309,12:11.32661309):27.84369119,25:39.17030427):15.25546075):10.12791797,((9:38.67000937,52:38.67000937):22.88355943,(29:29.07279144,77:29.07279144):32.48077736):3.00011419):11.8859695,((6:43.62199143,79:43.62199143):2.181389447,(14:11.97116622,36:11.97116622):33.83221465):30.63627162):2.536260033,(23:40.2102881,24:40.2102881):38.76562442):24.84892322,(18:37.55420611,19:37.55420611):66.27062964):96.83315842,78:200.6579942):40.22240434,(((((((((((((2:22.92102739,3:22.92102739):9.112455845,(42:29.45590285,57:29.45590285):2.57758038):6.686260003,(((16:18.30712456,28:18.30712456):6.41909505,(37:17.58781228,44:17.58781228):7.138407326):6.078042112,48:30.80426172):7.915481517):2.220065429,21:40.93980866):3.104643274,(8:29.67973318,47:29.67973318):14.36471876):4.597300969,((27:35.10498929,53:35.10498929):5.620806177,56:40.72579547):7.915957437):2.098403498,(7:39.89180679,33:39.89180679):10.84834961):6.989491667,(((((10:32.16117532,74:32.16117532):2.687773687,((26:17.76981139,31:17.76981139):8.696058661,(59:23.80597548,73:23.80597548):2.659894566):8.383078964):11.28003526,(22:18.50749778,45:18.50749778):27.62148649):1.924717157,(20:30.511405,38:30.511405):17.54229643):4.381949864,(((34:0.8760751532,35:0.8760751532):16.55278306,76:17.42885822):15.11048816,75:32.53934638):19.89630491):5.29399678):7.636939513,(13:51.20804927,17:51.20804927):14.15853831):5.418193514,72:70.7847811):6.402349884,((((4:6.887737037,5:6.887737037):23.42376011,(39:22.11023698,40:22.11023698):8.201260173):3.272495723,(41:22.66623492,54:22.66623492):10.91775796):20.43689483,(70:37.74423608,71:37.74423608):16.27665162):23.16624328):5.493347651,((61:32.39215253,65:32.39215253):22.16660971,((62:21.04732075,64:21.04732075):20.39255848,63:41.43987924):13.118883):28.1217164):2.545734255,((32:41.47236706,(46:30.56631818,58:30.56631818):10.90604888):3.208765603,(66:19.903242,((67:0.8703452567,68:0.8703452567):11.17385365,69:12.04419891):7.859043094):24.77789066):40.54508023):155.6541856):0;
+END;
