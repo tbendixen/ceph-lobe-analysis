@@ -1,5 +1,7 @@
+setwd("~/cephs")
+
 ### load lobe data
-dat <- read.csv("cephBrain.csv")
+dat <- read.csv("cephBrain.csv", sep = ",")
 
 ### standardize function
 standardize <- function(x) {
@@ -18,12 +20,12 @@ d <- dat
 d[, !(names(d) %in% excl_cols)] <- lapply(d[, !(names(d) %in% excl_cols)], function(x) round(standardize(log(x)), digits=3))
 
 ### set factor variables
-d$benthic <- factor(d$benthic)
-d$sociality.bin <- factor(d$sociality.bin)
+d$benthic <- factor(d$benthic, levels = c("1", "0"))
+d$sociality.bin <- factor(d$sociality.bin, levels = c("1", "0"))
 d$sociality.3 <- factor(d$sociality.3)
 d$habitat3 <- factor(d$habitat3)
 d$depth_cat <- factor(d$depth_cat)
-d$biolum <- factor(d$biolum)
+d$biolum <- factor(d$biolum, levels = c("1", "0"))
 
 ### load phylo data
 cephtreeMCC <- ape::read.nexus("cephtreeMCC.tree") #consensus (maximum clade credibility) tree
