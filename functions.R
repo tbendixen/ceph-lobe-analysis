@@ -1,47 +1,71 @@
+# To ensure that warnings are not turned to errors when running MCMC,
+# and to automatically build tools required for Stan
+options(warn = 1,
+        buildtools.check = function(action) TRUE )
 
 ### wrapper function to brms
-brms_func <- function(formula, constrain_imp = FALSE, vars) {
+brms_func <-   function(formula, constrain_imp = FALSE, vars, iter = 20000) {
+  
+  # Extract response variables from formula
+  bterms <- brmsterms(formula)
+  resp_vars <- names(bterms$terms)
+  
+  # Helper function to check if response has covariates
+  has_coef <- function(resp_idx) {
+    length(all.vars(bterms$dpars[[resp_idx]]$fe)) > 1
+  }
+  
+  # Helper function to check if response has random effects
+  has_re <-  function(resp_idx) {
+    length(bterms$dpars[[resp_idx]]$re$form) > 0
+  }
+  
+  # Build prior list dynamically
+  prior_list <-   set_prior("normal(0, 0.5)", class = "Intercept", resp = resp_vars[1])
+  if (has_coef(1)) prior_list <- prior_list + set_prior("normal(0, 0.25)", class = "b", resp = resp_vars[1])
+  if (has_re(1)) prior_list <- prior_list + set_prior("exponential(1)", class = "sd", resp = resp_vars[1])
+  prior_list <- prior_list + set_prior("exponential(2)", class = "sigma", resp = resp_vars[1])
+  
+  if(length(resp_vars) > 1) {
+    for (i in 2:length(resp_vars)) {
+      r <-   resp_vars[i]
+      prior_list <- prior_list + set_prior("normal(0, 0.5)", class = "Intercept", resp = r)
+      if (has_coef(i)) prior_list <- prior_list + set_prior("normal(0, 0.25)", class = "b", resp = r)
+      if (has_re(i)) prior_list <- prior_list + set_prior("exponential(1)", class = "sd", resp = r)
+      prior_list <- prior_list + set_prior("exponential(2)", class = "sigma", resp = r)
+    }
+  }
   
   if(constrain_imp) {
-    # If imputation should be constrained within some bounds for one or more variables,
-    # first run an "empty" model (setting chains = 0)
     model <- brm(formula,
-        prior = c(prior(normal(0,1), class = Intercept),
-                  prior(normal(0,0.5), class = b)),
-        data = d,
-        data2 = list(cormat = cormat),
-        chains = 0,
-        seed = 1,
-        backend = "rstan",
-        cores = 4) 
+                 prior = prior_list,
+                 data = d,
+                 data2 = list(cormat = cormat),
+                 chains = 0,
+                 seed = 1,
+                 backend = "rstan",
+                 cores = 4) 
     
-    # Extract to edit Stan code
     scode <- stancode(model)
-    
-    # Initialize imp_code as empty
     imp_code <- scode
     
     for (var in vars) {
-      # Match brms var name
       brms_var <- gsub("[\\._]", "", var)
       stan_var <- paste0("Ymi_", brms_var)
       
-      # Find lower and upper bounds from data
       lower_bound <- min(model$data[[var]], na.rm = TRUE)
       upper_bound <- max(model$data[[var]], na.rm = TRUE)
       
-      # Amend Stan code and set lower and upper bounds on the imputed variable
       imp_code <- gsub(paste0("vector[Nmi_", brms_var, "] ", stan_var, ";"),
                        paste0("vector<lower=", lower_bound, ", upper=", upper_bound, ">[Nmi_", brms_var, "] ", stan_var, ";"),
                        imp_code, fixed = TRUE)
     }
     
-    # Replace and compile the model object with the amended Stan code
-    attributes(model$fit)$stanmodel <- stan_model(cmdstanr::write_stan_file(imp_code))
+    stan_model_obj <-  stan_model(model_code = imp_code)
+    attributes(model$fit)$stanmodel <- stan_model_obj
     
-    # Fit to data with modified, constrained model
     model_constrain <- update(model,
-                              cores = 4, chains = 4, iter = 12000,
+                              cores = 4, chains = 4, iter = iter,
                               recompile = FALSE, 
                               control = list(adapt_delta = 0.99))
     
@@ -50,16 +74,15 @@ brms_func <- function(formula, constrain_imp = FALSE, vars) {
   
   else {
     brm(formula,
-      prior = c(prior(normal(0,1), class = Intercept),
-                prior(normal(0,0.5), class = b)),
-      data = d,
-      data2 = list(cormat = cormat),
-      iter = 12000, chains = 4,
-      seed = 1,
-      control = list(adapt_delta = 0.99),
-      backend = "rstan",
-      cores = 4) 
-    }
+        prior = prior_list,
+        data = d,
+        data2 = list(cormat = cormat),
+        iter = iter, chains = 4,
+        seed = 1,
+        control = list(adapt_delta = 0.99),
+        backend = "rstan",
+        cores = 4) 
+  }
 }
 
 ### function to extract posterior median of imputed values
@@ -203,22 +226,26 @@ cat_plot <- function(e, x_var, y_var, g_var, interaction = FALSE, data) {
 }
 
 ### function for gradient-density post pred plot
-gdensity_colors <- c("#2C70FE","#feba2c")
+gdensity_colors <- c("#feba2c", "#2C70FE")
 cat4_colors <- c("#feba2c", "#6A5ACD", "#4CAF50", "#2C70FE")
 
 gdensity_plot <- function(e, x_var, y_var, g_var, interaction = FALSE, data) {
   
+  # Check if x_var should be reversed (only for benthic and sociality)
+  x_var_name <- deparse(substitute(x_var))
+  should_reverse <- x_var_name %in% c("benthic", "sociality.bin")
+  
   if (interaction) {
     ggplot() + 
-      stat_slab(aes(x = {{x_var}},
+      stat_slab(aes(x = if(should_reverse) forcats::fct_rev(as.factor({{x_var}})) else as.factor({{x_var}}),
                     y = {{y_var}},
                     fill = as.factor({{ g_var }}),
                     slab_alpha = after_stat(f)), 
-                 data = data,
+                data = data,
                 width = 0.5,
                 n = 2000, 
                 show.legend = FALSE) +
-      stat_pointinterval(data = e, aes(x = {{x_var}}, 
+      stat_pointinterval(data = e, aes(x = if(should_reverse) forcats::fct_rev(as.factor({{x_var}})) else as.factor({{x_var}}),
                                        y = .epred,
                                        color = as.factor({{ g_var }}), 
                                        fill = as.factor({{ g_var }})),
@@ -231,7 +258,7 @@ gdensity_plot <- function(e, x_var, y_var, g_var, interaction = FALSE, data) {
     
   } else {
     ggplot() + 
-      stat_slab(aes(x = {{x_var}},
+      stat_slab(aes(x = if(should_reverse) forcats::fct_rev(as.factor({{x_var}})) else as.factor({{x_var}}),
                     y = {{y_var}},
                     fill = as.factor({{ x_var }}),
                     slab_alpha = after_stat(f)), 
@@ -239,7 +266,7 @@ gdensity_plot <- function(e, x_var, y_var, g_var, interaction = FALSE, data) {
                 width = 0.5,
                 n = 2000, 
                 show.legend = FALSE) +
-      stat_pointinterval(data = e, aes(x = {{x_var}}, 
+      stat_pointinterval(data = e, aes(x = if(should_reverse) forcats::fct_rev(as.factor({{x_var}})) else as.factor({{x_var}}),
                                        y = .epred),
                          point_interval = median_hdci,
                          .width = 0.95,
