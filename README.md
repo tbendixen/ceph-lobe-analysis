@@ -1,4 +1,4 @@
-Code and data for *Comparative analysis of brain lobe size variation in coleoid cephalopods* by Jennifer Mather, Theiss Bendixen, Kiran Basava, Alexander Leonhard, Nicole George, Zoé Vanhersecke, Joshua Omotosho, Michael Muthukrishna
+Code and data for *Brain size of coleoid cephalopods varies with ecological complexity, but not the size of either the optic or the vertical lobes* by Jennifer Mather, Theiss Bendixen, Kiran Basava, Alexander Leonhard, Nicole George, Zoé Vanhersecke, Joshua Omotosho, Michael Muthukrishna
 
 Data is stored in `cephBrain.csv`. 
 
